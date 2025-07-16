@@ -119,7 +119,7 @@ async function analyzeSalesData(params = {}) {
   
   try {
     const { fileName = 'sales-data.parquet', analysis = 'basic' } = params;
-    const filePath = path.join(process.cwd(), 'data', fileName);
+    const filePath = path.join(process.cwd(), 'src', 'data', fileName);
     
     console.log(`Reading parquet file: ${filePath}`);
     const df = pl.readParquet(filePath);
@@ -243,7 +243,7 @@ async function analyzeUserData(params = {}) {
   
   try {
     const { fileName = 'user-data.parquet', segmentation = 'basic' } = params;
-    const filePath = path.join(process.cwd(), 'data', fileName);
+    const filePath = path.join(process.cwd(), 'src', 'data', fileName);
     
     console.log(`Analyzing user data: ${filePath}`);
     const df = pl.readParquet(filePath);

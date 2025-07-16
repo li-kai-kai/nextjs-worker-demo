@@ -33,7 +33,7 @@ async function generateSampleData() {
     );
 
     // 保存为parquet文件
-    const outputPath = path.join(__dirname, '..', 'data', 'sales-data.parquet');
+    const outputPath = path.join(__dirname, '..', '..', 'data', 'sales-data.parquet');
     await salesWithRevenue.writeParquet(outputPath);
     
     console.log('Sample sales data generated successfully!');
@@ -61,7 +61,7 @@ async function generateSampleData() {
       )
     });
 
-    const userOutputPath = path.join(__dirname, '..', 'data', 'user-data.parquet');
+    const userOutputPath = path.join(__dirname, '..', '..', 'data', 'user-data.parquet');
     await userData.writeParquet(userOutputPath);
     
     console.log('Sample user data generated successfully!');
