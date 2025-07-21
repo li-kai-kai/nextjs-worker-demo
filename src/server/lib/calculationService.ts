@@ -1,54 +1,64 @@
 import { 
   CalculationParams, 
-  DataAnalysisParams, 
   CalculationResult, 
-  MatrixCalculationResult,
-  DataAnalysisResult 
+  MatrixCalculationResult
 } from '../../shared/types/api'
-import { executeInWorker } from './workerPool'
+import { executeFunction } from './workerPool'
+import { DependencyManager } from './dependencyManager'
 
+/**
+ * 计算服务 - 协调业务处理器和Worker Pool（支持依赖注入）
+ * 不包含具体业务逻辑，只负责调度
+ */
 export class CalculationService {
+  
   static async executeComplexCalculation(params: CalculationParams): Promise<CalculationResult> {
-    return executeInWorker<CalculationResult>('complexCalculation', [params])
+    const processorName = 'math'
+    const functionName = 'complexCalculation'
+    
+    const functionCode = DependencyManager.getFunctionCode(processorName, functionName)
+    const dependencies = DependencyManager.getDependencies(processorName, functionName)
+    const isAsync = DependencyManager.isAsync(processorName, functionName)
+    
+    return executeFunction<CalculationResult>(functionCode, functionName, [params], dependencies, isAsync)
   }
 
   static async executeMatrixCalculation(size: number): Promise<MatrixCalculationResult> {
-    return executeInWorker<MatrixCalculationResult>('heavyMatrixCalculation', [size])
-  }
-
-  static async executeSalesAnalysis(params: DataAnalysisParams): Promise<DataAnalysisResult> {
-    return executeInWorker<DataAnalysisResult>('analyzeSalesData', [params])
-  }
-
-  static async executeUserAnalysis(params: DataAnalysisParams): Promise<DataAnalysisResult> {
-    return executeInWorker<DataAnalysisResult>('analyzeUserData', [params])
+    const processorName = 'math'
+    const functionName = 'matrixCalculation'
+    
+    const functionCode = DependencyManager.getFunctionCode(processorName, functionName)
+    const dependencies = DependencyManager.getDependencies(processorName, functionName)
+    const isAsync = DependencyManager.isAsync(processorName, functionName)
+    
+    return executeFunction<MatrixCalculationResult>(functionCode, functionName, [size], dependencies, isAsync)
   }
 
   static async executeCalculation(
     type: string, 
-    params: CalculationParams & DataAnalysisParams
-  ): Promise<CalculationResult | MatrixCalculationResult | DataAnalysisResult> {
+    params: CalculationParams
+  ): Promise<CalculationResult | MatrixCalculationResult> {
     switch (type) {
       case 'matrix':
-        return this.executeMatrixCalculation(params.size || 50)
-      
-      case 'sales':
-        return this.executeSalesAnalysis({
-          fileName: params.fileName || 'sales-data.parquet',
-          analysis: params.analysis
-        })
-      
-      case 'users':
-        return this.executeUserAnalysis({
-          fileName: params.fileName || 'user-data.parquet',
-          segmentation: params.segmentation || params.analysis
-        })
+        return this.executeMatrixCalculation(params.size || 50);
       
       default:
         return this.executeComplexCalculation({
           iterations: params.iterations,
           complexity: params.complexity
-        })
+        });
     }
+  }
+
+  // 新增：数据分析功能
+  static async executeDataAnalysis(analysisType: string, params: any) {
+    const processorName = 'data'
+    const functionName = analysisType
+    
+    const functionCode = DependencyManager.getFunctionCode(processorName, functionName)
+    const dependencies = DependencyManager.getDependencies(processorName, functionName)
+    const isAsync = DependencyManager.isAsync(processorName, functionName)
+    
+    return executeFunction(functionCode, functionName, [params], dependencies, isAsync)
   }
 }
