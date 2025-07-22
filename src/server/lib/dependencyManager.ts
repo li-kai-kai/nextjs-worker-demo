@@ -151,12 +151,16 @@ DependencyManager.register('data', {
       const df = pl.readParquet(filePath);
       const stats = df.describe().toRecords();
       
+      // 转换为二进制Buffer传输
+      const serializedStats = Buffer.from(JSON.stringify(stats));
+      
       return {
         fileName,
         rowCount: df.height,
         columnCount: df.width,
-        statistics: stats,
-        processingTime: Date.now()
+        statistics: serializedStats,
+        processingTime: Date.now(),
+        isBinary: true
       };
     },
     config: {

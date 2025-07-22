@@ -122,8 +122,104 @@ function executeSync(functionCode, functionName, args = [], dependencies = []) {
   }
 }
 
+/**
+ * 执行编译后的bundle代码
+ * @param {string} bundleCode - 编译后的完整bundle代码
+ * @param {string} functionName - 要执行的函数名
+ * @param {any[]} args - 函数参数
+ * @returns {Promise<any>} 执行结果
+ */
+async function executeBundle(bundleCode, functionName, args = []) {
+  try {
+    // 创建一个模块作用域来执行bundle
+    const moduleScope = {
+      exports: {},
+      module: { exports: {} },
+      require: require,
+      process: process,
+      Buffer: Buffer,
+      __dirname: __dirname,
+      __filename: __filename,
+      console: console,
+      setTimeout: setTimeout,
+      setInterval: setInterval,
+      clearTimeout: clearTimeout,
+      clearInterval: clearInterval
+    };
+
+    // 使用Function构造器创建模块执行环境
+    const moduleWrapper = new Function(
+      'exports', 'module', 'require', 'process', 'Buffer', '__dirname', '__filename', 
+      'console', 'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval',
+      bundleCode
+    );
+
+    // 执行bundle代码
+    moduleWrapper.call(
+      moduleScope,
+      moduleScope.exports,
+      moduleScope.module,
+      moduleScope.require,
+      moduleScope.process,
+      moduleScope.Buffer,
+      moduleScope.__dirname,
+      moduleScope.__filename,
+      moduleScope.console,
+      moduleScope.setTimeout,
+      moduleScope.setInterval,
+      moduleScope.clearTimeout,
+      moduleScope.clearInterval
+    );
+
+    // 获取导出的函数
+    const exportedFunctions = moduleScope.module.exports;
+    
+    if (typeof exportedFunctions !== 'object' || !exportedFunctions) {
+      throw new Error('Bundle did not export an object');
+    }
+
+    const targetFunction = exportedFunctions[functionName];
+    if (typeof targetFunction !== 'function') {
+      const availableFunctions = Object.keys(exportedFunctions).filter(
+        key => typeof exportedFunctions[key] === 'function'
+      );
+      throw new Error(
+        `Function '${functionName}' not found or not a function. Available functions: [${availableFunctions.join(', ')}]`
+      );
+    }
+
+    // 执行目标函数
+    let result = targetFunction.apply(null, args);
+    
+    // 如果返回Promise，等待其完成
+    if (result && typeof result.then === 'function') {
+      result = await result;
+    }
+
+    return {
+      success: true,
+      result,
+      timestamp: new Date().toISOString(),
+      memoryUsage: process.memoryUsage(),
+      functionName,
+      bundleSize: Buffer.byteLength(bundleCode, 'utf8')
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString(),
+      memoryUsage: process.memoryUsage(),
+      functionName,
+      bundleSize: bundleCode ? Buffer.byteLength(bundleCode, 'utf8') : 0
+    };
+  }
+}
+
 // 注册Worker方法
 workerpool.worker({
   execute,
-  executeSync
+  executeSync,
+  executeBundle
 });

@@ -14,6 +14,7 @@
   "license": "ISC",
   "packageManager": "pnpm@10.6.3",
   "dependencies": {
+    "esbuild": "^0.25.8",
     "next": "^15.3.3",
     "nodejs-polars": "^0.18.0",
     "react": "^19.1.0",

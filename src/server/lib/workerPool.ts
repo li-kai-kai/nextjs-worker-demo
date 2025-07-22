@@ -1,5 +1,6 @@
 import workerpool from 'workerpool'
 import path from 'path'
+import { bundleForWorker, BundleOptions, cleanupTempFile, createTempEntryFile } from './bundler'
 
 let pool: workerpool.Pool | null = null
 
@@ -45,4 +46,60 @@ export async function executeFunction<T>(
   const workerPool = getWorkerPool()
   const method = isAsync ? 'execute' : 'executeSync'
   return workerPool.exec(method, [functionCode, functionName, args, dependencies])
+}
+
+/**
+ * 编译并执行入口文件中的函数
+ * @param entryPoint 入口文件路径
+ * @param functionName 要执行的函数名
+ * @param args 函数参数
+ * @param bundleOptions 编译选项
+ */
+export async function executeFromBundle<T>(
+  entryPoint: string,
+  functionName: string,
+  args: any[] = [],
+  bundleOptions?: Partial<BundleOptions>
+): Promise<T> {
+  const bundleResult = await bundleForWorker({
+    entryPoint,
+    ...bundleOptions
+  })
+
+  // 检查函数是否在导出列表中
+  if (!bundleResult.exports.includes(functionName)) {
+    throw new Error(`Function '${functionName}' not found in exports: [${bundleResult.exports.join(', ')}]`)
+  }
+
+  const workerPool = getWorkerPool()
+  return workerPool.exec('executeBundle', [bundleResult.code, functionName, args])
+}
+
+/**
+ * 从代码字符串创建临时入口文件并执行
+ * @param code 代码字符串
+ * @param functionName 要执行的函数名
+ * @param args 函数参数
+ * @param bundleOptions 编译选项
+ */
+export async function executeFromCode<T>(
+  code: string,
+  functionName: string,
+  args: any[] = [],
+  bundleOptions?: Partial<BundleOptions>
+): Promise<T> {
+  let tempFile: string | null = null
+  
+  try {
+    // 创建临时文件
+    tempFile = await createTempEntryFile(code)
+    
+    // 执行
+    return await executeFromBundle<T>(tempFile, functionName, args, bundleOptions)
+  } finally {
+    // 清理临时文件
+    if (tempFile) {
+      cleanupTempFile(tempFile)
+    }
+  }
 }
